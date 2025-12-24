@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Picker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 30px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .phase {
+            display: none;
+        }
+
+        .phase.active {
+            display: block;
+        }
+
+        /* Input Phase */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: #ee5a6f;
+        }
+
+        .list-container {
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .list-item.disabled {
+            opacity: 0.5;
+            background: #e9ecef;
+        }
+
+        .list-item-content {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .list-item.disabled .list-item-content {
+            text-decoration: line-through;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        /* Selection Phase */
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            animation: pulse 0.5s ease-out;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .result-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .result-value {
+                font-size: 24px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Random Picker</h1>
+        <p class="subtitle">Add items and pick them randomly</p>
+
+        <!-- Input Phase -->
+        <div id="inputPhase" class="phase active">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="itemInput" 
+                    placeholder="Enter an item..." 
+                    autocomplete="off"
+                >
+                <button class="btn-primary" onclick="addItem()">Add</button>
+            </div>
+
+            <div class="list-container" id="itemsList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📝</div>
+                    <p>No items yet. Add some items to get started!</p>
+                </div>
+            </div>
+
+            <button 
+                class="btn-primary" 
+                style="width: 100%; margin-top: 20px;" 
+                id="startButton" 
+                onclick="startSelection()" 
+                disabled
+            >
+                Start Picking
+            </button>
+        </div>
+
+        <!-- Selection Phase -->
+        <div id="selectionPhase" class="phase">
+            <div class="result-card" id="resultCard" style="display: none;">
+                <div class="result-label">Selected</div>
+                <div class="result-value" id="selectedItem"></div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="remainingCount">0</div>
+                    <div class="stat-label">Remaining</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="pickedCount">0</div>
+                    <div class="stat-label">Picked</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="pickNext()" id="nextButton">
+                    Pick Next
+                </button>
+                <button class="btn-secondary" onclick="resetToInput()">
+                    ← Back to Edit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let availableItems = [];
+        let pickedItems = [];
+
+        function addItem() {
+            const input = document.getElementById('itemInput');
+            const value = input.value.trim();
+            
+            if (value) {
+                items.push({
+                    id: Date.now(),
+                    text: value,
+                    enabled: true
+                });
+                input.value = '';
+                renderItems();
+                updateStartButton();
+            }
+        }
+
+        function removeItem(id) {
+            items = items.filter(item => item.id !== id);
+            renderItems();
+            updateStartButton();
+        }
+
+        function toggleItem(id) {
+            const item = items.find(item => item.id === id);
+            if (item) {
+                item.enabled = !item.enabled;
+                renderItems();
+                updateStartButton();
+            }
+        }
+
+        function renderItems() {
+            const container = document.getElementById('itemsList');
+            
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>No items yet. Add some items to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="list-item ${!item.enabled ? 'disabled' : ''}">
+                    <input 
+                        type="checkbox" 
+                        class="checkbox" 
+                        ${item.enabled ? 'checked' : ''} 
+                        onchange="toggleItem(${item.id})"
+                    >
+                    <div class="list-item-content">${escapeHtml(item.text)}</div>
+                    <button class="btn-danger" onclick="removeItem(${item.id})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function updateStartButton() {
+            const button = document.getElementById('startButton');
+            const enabledCount = items.filter(item => item.enabled).length;
+            button.disabled = enabledCount === 0;
+        }
+
+        function startSelection() {
+            availableItems = items.filter(item => item.enabled).map(item => ({...item}));
+            pickedItems = [];
+            
+            document.getElementById('inputPhase').classList.remove('active');
+            document.getElementById('selectionPhase').classList.add('active');
+            document.getElementById('resultCard').style.display = 'none';
+            
+            updateStats();
+        }
+
+        function pickNext() {
+            if (availableItems.length === 0) {
+                // Reset to initial list
+                availableItems = items.filter(item => item.enabled).map(item => ({...item}));
+                pickedItems = [];
+                document.getElementById('resultCard').style.display = 'none';
+                updateStats();
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * availableItems.length);
+            const selected = availableItems[randomIndex];
+            
+            availableItems.splice(randomIndex, 1);
+            pickedItems.push(selected);
+            
+            document.getElementById('selectedItem').textContent = selected.text;
+            document.getElementById('resultCard').style.display = 'block';
+            
+            updateStats();
+            
+            if (availableItems.length === 0) {
+                document.getElementById('nextButton').textContent = 'Reset & Pick Again';
+            } else {
+                document.getElementById('nextButton').textContent = 'Pick Next';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('remainingCount').textContent = availableItems.length;
+            document.getElementById('pickedCount').textContent = pickedItems.length;
+        }
+
+        function resetToInput() {
+            document.getElementById('selectionPhase').classList.remove('active');
+            document.getElementById('inputPhase').classList.add('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow Enter key to add items
+        document.getElementById('itemInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addItem();
+            }
+        });
+    </script>
+</body>
+</html>
+
