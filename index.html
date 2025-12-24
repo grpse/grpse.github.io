@@ -133,6 +133,22 @@
             background: #ee5a6f;
         }
 
+        .btn-clear {
+            background: transparent;
+            color: #999;
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-size: 13px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .btn-clear:hover {
+            background: #f5f5f5;
+            color: #ff4757;
+            border-color: #ff4757;
+        }
+
         .list-container {
             margin: 20px 0;
             max-height: 300px;
@@ -254,6 +270,34 @@
             flex: 1;
         }
 
+        .btn-warning {
+            background: #ffa502;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #ff9000;
+        }
+
+        .btn-success {
+            background: #2ed573;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #26de81;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+
         @media (max-width: 480px) {
             .container {
                 padding: 20px;
@@ -310,6 +354,15 @@
             >
                 Start Picking
             </button>
+
+            <button 
+                class="btn-clear" 
+                style="width: 100%; margin-top: 10px;" 
+                onclick="clearAllData()" 
+                id="clearButton"
+            >
+                🗑️ Clear All Data
+            </button>
         </div>
 
         <!-- Selection Phase -->
@@ -317,6 +370,12 @@
             <div class="result-card" id="resultCard" style="display: none;">
                 <div class="result-label">Selected</div>
                 <div class="result-value" id="selectedItem"></div>
+            </div>
+
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button class="btn-warning" onclick="removeCurrentItem()">
+                    🗑️ Remove (Collected)
+                </button>
             </div>
 
             <div class="stats">
@@ -328,6 +387,10 @@
                     <div class="stat-value" id="pickedCount">0</div>
                     <div class="stat-label">Picked</div>
                 </div>
+                <div class="stat">
+                    <div class="stat-value" id="removedCount">0</div>
+                    <div class="stat-label">Removed</div>
+                </div>
             </div>
 
             <div class="button-group">
@@ -338,6 +401,10 @@
                     ← Back to Edit
                 </button>
             </div>
+
+            <button class="btn-success" style="width: 100%; margin-top: 10px;" onclick="fullReset()">
+                🔄 Full Reset (Restore All)
+            </button>
         </div>
     </div>
 
@@ -345,6 +412,38 @@
         let items = [];
         let availableItems = [];
         let pickedItems = [];
+        let removedItems = [];
+        let currentSelected = null;
+
+        // LocalStorage keys
+        const STORAGE_KEY_ITEMS = 'randomPicker_items';
+
+        // Load data from localStorage
+        function loadFromStorage() {
+            try {
+                const storedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
+                
+                if (storedItems) {
+                    items = JSON.parse(storedItems);
+                    renderItems();
+                    updateStartButton();
+                }
+            } catch (e) {
+                console.error('Error loading from storage:', e);
+            }
+        }
+
+        // Save data to localStorage (only items list)
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
+            } catch (e) {
+                console.error('Error saving to storage:', e);
+            }
+        }
+
+        // Initialize on page load
+        loadFromStorage();
 
         function addItem() {
             const input = document.getElementById('itemInput');
@@ -359,6 +458,7 @@
                 input.value = '';
                 renderItems();
                 updateStartButton();
+                saveToStorage();
             }
         }
 
@@ -366,6 +466,7 @@
             items = items.filter(item => item.id !== id);
             renderItems();
             updateStartButton();
+            saveToStorage();
         }
 
         function toggleItem(id) {
@@ -374,6 +475,7 @@
                 item.enabled = !item.enabled;
                 renderItems();
                 updateStartButton();
+                saveToStorage();
             }
         }
 
@@ -406,27 +508,44 @@
 
         function updateStartButton() {
             const button = document.getElementById('startButton');
-            const enabledCount = items.filter(item => item.enabled).length;
+            const removedIds = removedItems.map(item => item.id);
+            const enabledCount = items.filter(item => item.enabled && !removedIds.includes(item.id)).length;
             button.disabled = enabledCount === 0;
+            
+            if (removedItems.length > 0) {
+                button.textContent = `Start Picking (${enabledCount} available, ${removedItems.length} removed)`;
+            } else {
+                button.textContent = 'Start Picking';
+            }
         }
 
         function startSelection() {
-            availableItems = items.filter(item => item.enabled).map(item => ({...item}));
+            const removedIds = removedItems.map(item => item.id);
+            availableItems = items
+                .filter(item => item.enabled && !removedIds.includes(item.id))
+                .map(item => ({...item}));
             pickedItems = [];
+            currentSelected = null;
             
             document.getElementById('inputPhase').classList.remove('active');
             document.getElementById('selectionPhase').classList.add('active');
             document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
             
             updateStats();
         }
 
         function pickNext() {
             if (availableItems.length === 0) {
-                // Reset to initial list
-                availableItems = items.filter(item => item.enabled).map(item => ({...item}));
+                // Reset to initial list (excluding removed items)
+                const removedIds = removedItems.map(item => item.id);
+                availableItems = items
+                    .filter(item => item.enabled && !removedIds.includes(item.id))
+                    .map(item => ({...item}));
                 pickedItems = [];
+                currentSelected = null;
                 document.getElementById('resultCard').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
                 updateStats();
                 return;
             }
@@ -436,9 +555,11 @@
             
             availableItems.splice(randomIndex, 1);
             pickedItems.push(selected);
+            currentSelected = selected;
             
             document.getElementById('selectedItem').textContent = selected.text;
             document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('actionButtons').style.display = 'flex';
             
             updateStats();
             
@@ -452,11 +573,78 @@
         function updateStats() {
             document.getElementById('remainingCount').textContent = availableItems.length;
             document.getElementById('pickedCount').textContent = pickedItems.length;
+            document.getElementById('removedCount').textContent = removedItems.length;
+        }
+
+        function removeCurrentItem() {
+            if (currentSelected) {
+                // Add to removed items (session only, not saved to localStorage)
+                removedItems.push(currentSelected);
+                
+                // Remove from picked items
+                pickedItems = pickedItems.filter(item => item.id !== currentSelected.id);
+                
+                // Hide the result card and action buttons
+                document.getElementById('resultCard').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
+                
+                currentSelected = null;
+                updateStats();
+                
+                // Update button text if no items left
+                if (availableItems.length === 0) {
+                    const removedIds = removedItems.map(item => item.id);
+                    const remainingEnabled = items.filter(item => item.enabled && !removedIds.includes(item.id)).length;
+                    
+                    if (remainingEnabled === 0) {
+                        document.getElementById('nextButton').textContent = 'No Items Left';
+                        document.getElementById('nextButton').disabled = true;
+                    }
+                }
+            }
+        }
+
+        function fullReset() {
+            // Reset everything including removed items (session only)
+            removedItems = [];
+            const removedIds = [];
+            availableItems = items
+                .filter(item => item.enabled)
+                .map(item => ({...item}));
+            pickedItems = [];
+            currentSelected = null;
+            
+            document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('nextButton').textContent = 'Pick Next';
+            document.getElementById('nextButton').disabled = false;
+            
+            updateStats();
         }
 
         function resetToInput() {
             document.getElementById('selectionPhase').classList.remove('active');
             document.getElementById('inputPhase').classList.add('active');
+            // Keep removed items in memory
+        }
+
+        function clearAllData() {
+            if (items.length === 0 && removedItems.length === 0) {
+                return;
+            }
+            
+            if (confirm('Are you sure you want to clear all data? This will remove all items and cannot be undone.')) {
+                items = [];
+                removedItems = [];
+                availableItems = [];
+                pickedItems = [];
+                currentSelected = null;
+                
+                localStorage.removeItem(STORAGE_KEY_ITEMS);
+                
+                renderItems();
+                updateStartButton();
+            }
         }
 
         function escapeHtml(text) {
